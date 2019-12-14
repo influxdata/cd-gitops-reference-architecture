@@ -1,0 +1,99 @@
+          ┌───────────────────────────┐
+          │                           │
+          │          app.git          │
+          │                           │
+          └───────────────────────────┘
+                        │
+                        │
+                     Master
+                   branch is
+                    updated
+                        │
+                        ▼
+         ┌────────────────────────────┐
+         │ CI pipeline builds Docker  │
+         │images for every service in │
+         │      the application       │
+         └────────────────────────────┘
+                        │
+           CI posts new image tags and
+              digests to cfgupdater
+                        │
+                        │
+                        ▼
+     ┌────────────────────────────────────┐
+     │ cfgupdater creates a new commit in │
+     │  cfg-app to update Staging images  │
+     │   to the most recent app commit    │
+     │                                    │
+     └────────────────────────────────────┘   ┌─────────────────────┐
+                        │                     │ Developer directly  │
+                        │                     │ modifies Jsonnet to │
+                Effectively, git   ┌──────────│  update Kubernetes  │
+                      push         │          │     resource(s)     │
+                        │          │          └─────────────────────┘
+                        ▼          ▼
+        ┌───────────────────────────────┐
+        │          cfg-app.git          │
+        │                               ├─────────────────┐
+┌──────▶│(Jsonnet to generate k8s YAML) │                 │
+│ ┌────▶│                               ├───────┐         │
+│ │     └───────────────────────────────┘       │         │
+│ │                     │                       │         │
+│ │                     │                       │         │
+│ │         Argo observes cfg-app.git           │         │
+│ │           update on Staging env             │         │
+│ │                  config                     │         │
+│ │                     │                       │         │
+│ │                     ▼                       │         │
+│ │     ┌──────────────────────────────┐        │         │
+│ │     │  Argo CD deploys to Staging  │        │         │
+│ │     │             envs             │        │         │
+│ │     │                              │  Argo observes   │
+│ │     └──────────────────────────────┘   cfg-app.git    │
+│ │                     │                   update on     │
+│ │                     │                 Internal env    │
+│ │         Argo CD post-deploy hook         config       │
+│ │       indicating successful deploy          │         │
+│ │                     │                       │         │
+│ │                     │                       │         │
+│ │                     ▼                       │         │
+│ │  ┌─────────────────────────────────────┐    │         │
+│ │  │                                     │    │         │
+│ │  │ cfgupdater creates a new commit in  │    │         │
+│ │  │    cfg-app, promoting the images    │    │         │
+│ └──│  successfully deployed to Staging,  │    │   Argo observes
+│    │     into Internal environments      │    │    cfg-app.git
+│    │                                     │    │     update on
+│    └─────────────────────────────────────┘    │  Production env
+│                                               │      config
+│                                               │         │
+│                                               │         │
+│        ┌──────────────────────────────┐       │         │
+│        │ Argo CD deploys to Internal  │       │         │
+│        │             envs             │◀──────┘         │
+│        └──────────────────────────────┘                 │
+│                        │                                │
+│               Argo CD post-deploy                       │
+│                 hook indicating                         │
+│                successful deploy                        │
+│                        │                                │
+│                        │                                │
+│                        ▼                                │
+│     ┌─────────────────────────────────────┐             │
+│     │                                     │             │
+│     │ cfgupdater creates a new commit in  │             │
+│     │    cfg-app, promoting the images    │             │
+└─────│ successfully deployed to Internal,  │             │
+      │    into Production environments     │             │
+      │                                     │             │
+      └─────────────────────────────────────┘             │
+                                                          │
+                                                          │
+          ┌──────────────────────────────┐                │
+          │Argo CD deploys to Production │                │
+          │         environments         │◀───────────────┘
+          │                              │
+          └──────────────────────────────┘
+
+Created with Monodraw

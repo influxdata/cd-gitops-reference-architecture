@@ -1,0 +1,26 @@
+# This Dockerfile produces a single Docker image that holds a whitelisted set of built binaries,
+# as defined in scripts/build-cd-base.bash.
+# Downstream builds will copy only the binaries they need from this base layer.
+
+FROM docker.io/golang:1.12-buster as builder
+
+# Workdir isn't going to change, so set it first.
+# We don't need to be in a fake GOPATH anymore.
+WORKDIR /app
+
+# Copy over the shell scripts we use inside other downstream containers.
+# These scripts are less likely to change than the binaries we compile.
+COPY \
+	./service/foo/do_something.sh \
+	./service/bar/do_something_else.sh \
+	/app-bins/
+
+# Assuming the vendor directory is up-to-date with `go mod vendor`.
+COPY . /app
+
+# Build the whitelisted binaries.
+RUN APP_BIN_DEST=/app-bins CLEAN_GOCACHE=1 /app/scripts/build-cd-base.bash
+
+# Our final image is only going to hold the binaries and any shell scripts needed for other images.
+FROM scratch
+COPY --from=builder /app/ /app-bins/
