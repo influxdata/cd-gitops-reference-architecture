@@ -67,7 +67,7 @@ But there are a couple details to be aware of:
 - Go embeds a "build ID" that differs per host. Fix it to be the empty string with `GOFLAGS='-ldflags=-buildid='`.
 - In Go 1.13 and newer, you can use `-trimpath` so that the source directory where you're building isn't included in the debug info.
     If you are using an older version of Go, just be sure that the source code is in the same absolute path on any machine building the source code.
-- If you are building in module mode, a module update that doesn't result in a material change can still effect the build.
+- If you are building in module mode, a module update that doesn't result in a material change can still affect the build.
     That is, if you upgrade module `foo` from v1.0 to v1.1, and foo/bar changes even though you don't reference that package,
     the debug information will differ between the two builds because of referencing `"foo@v1.0"` in one build and `"foo@v1.1"` in the next.
     You can avoid this problem if you build from the vendor directory, by not using modules at all, or by using `go mod vendor` and building with `-mod=vendor`.
@@ -133,6 +133,33 @@ Note that when Argo CD observes a directory, it will parse any Jsonnet
 and it will interpret straight Kubernetes resources in YAML.
 When we generate our YAML, we generate it into its own directory,
 to avoid Argo CD giving warnings about duplicate resource definitions.
+
+#### Regenerate YAML rather than risking merge conflicts
+
+Most of the time, you're writing config changes against master, so there is little risk of merge conflict.
+But every once in a while, you may have an old branch that needs to be rebased.
+If you are automatically rebasing commits, such as the strategy mentioned in the cfgupdater document,
+there will not be a human operator around to handle any merge conflicts.
+
+Luckily, it's easy to instruct git to use [a custom merge driver](https://www.git-scm.com/docs/gitattributes#_defining_a_custom_merge_driver).
+One simple approach looks like:
+
+```sh
+git config --local merge.regenerateyaml.name 'Regenerate YAML'
+git config --local merge.regenerateyaml.driver 'make regenerate-single-yaml REGENERATE_YAML=%P GIT_MERGE_OUT=%A'
+```
+
+The `%P` argument is the path in the working tree of the file that had a conflict.
+You may overwrite that file, but git also expects you to write the "merged" result to the `%A` argument.
+If you don't do that, the current version of git gives a strange error like `error: add_cacheinfo failed to refresh for path`.
+
+Finally, you must set up a .gitattributes entry like:
+
+```
+/generated/*/*.yml merge=regenerateyaml
+```
+
+This tells git to use the custom merge driver you configured earlier, when handling merges on files that match that pattern.
 
 ### Accessible Entrypoints to Config Operations
 

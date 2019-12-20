@@ -172,8 +172,13 @@ Here are the details on the helpers referenced in the above implementation detai
 #### `helper_align_auto`
 
 The rebase at the end of `helper_align_auto` is likely the most brittle part of this git automation.
-A more intelligent solution would inspect the trailers on the commits in the auto branch,
+
+One potentially more intelligent solution would inspect the trailers on the commits in the auto branch,
 and then "replay" those actions as new commits on master.
+
+For now, we are using the rebase strategy, but we are specifically regenerating YAML,
+as detailed in the README, rather than allowing the possibility of merge conflicts in those generated files.
+Before rebasing, we run the appropriate `git config` commands to configure the custom merge driver.
 
 ```sh
 MASTER_SHA="$(git rev-parse master)"
