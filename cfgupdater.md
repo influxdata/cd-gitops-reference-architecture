@@ -82,13 +82,12 @@ git checkout --detach auto || helper_refresh
 make introduce_images IMAGE_FILE=/tmp/images.json
 
 # Format the commit message, and use commit -a to commit all changes to updated files.
-echo "chore: update app to ${APP_SHA:0:10}
+git commit -a -m "chore: update app to ${APP_SHA:0:10}
 
 Autocommit-App-SHA: $APP_SHA
 Autocommit-Target: staging
 Autocommit-Reason: new images published
-" |
-git commit -a --file=-
+"
 
 # Set the branch back now that the commit is finalized.
 git checkout -B auto HEAD
@@ -98,7 +97,9 @@ git push origin auto:auto
 
 If you are concerned that your CI pipeline may replay a build,
 this stage could see if the image has been published before by inspecting the output of
-`git log --format='%(trailers:key=Autocommit-App-SHA,valueonly) auto`.
+`git log --format='%(trailers:key=Autocommit-App-SHA,valueonly)' auto`.
+However, note that this format style [requires git 2.22](https://github.com/git/git/blob/7a6a90c6ec48fc78c83d7090d6c1b95d8f3739c0/Documentation/RelNotes/2.22.0.txt#L21-L23) or newer,
+and as of this writing, [the newest git you can apt-get install on Debian Buster or Stretch, even with backports, is git 2.20](https://unix.stackexchange.com/q/559437).
 
 ### CI Status Reported
 
